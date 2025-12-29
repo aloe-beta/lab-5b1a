@@ -1,0 +1,14 @@
+{
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "vite": "^7.3.0"
+  },
+  "dependencies": {
+    "@noble/post-quantum": "^0.5.3"
+  },
+  "scripts": {
+    "frontend": "npx vite --host",
+    "backend": "node --watch app.ts"
+  }
+}
