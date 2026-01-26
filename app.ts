@@ -116,19 +116,24 @@ server.post('/api/auth', async req => {
         return [{ error: 'Invalid credentials' }, 401];
     }
 
-    const sessionId = crypto.randomBytes(32).toBase64();
+    const sessionId = db.createSession(user.uid);
     
     return [{ wdek: user.wdek, sessionId }];
 });
 
-// server.post('/api/db', async req => {
-//     const { sessionId, key } = await req.jsonBody(); 
-//     if (invalid(sessionId, 44) || key.length > 128 || key.length === 0) {
-//         return [{ error: 'Malformed request' }, 400];
-//     }
+server.post('/api/db', async req => {
+    const { sessionId, key } = await req.jsonBody(); 
+    if (invalid(sessionId, 44) || key.length > 128 || key.length === 0) {
+        return [{ error: 'Malformed request' }, 400];
+    }
 
-//     //
-// });
+    const session = db.getBySession(sessionId);
+    if (!session) {
+        return [{ error: 'Invalid credentials' }, 401];
+    }
+
+    //
+});
 // server.get('/api/db', async req => {
 //     //
 // });

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 function sanitize(string: string) {
     return Buffer.from(string).toBase64();
@@ -129,7 +130,7 @@ export class UserDatabase {
             return false;
         }
 
-        db.users[id] = { ...data, username };
+        db.users[id] = { ...data, username, uid: id };
         db.names[username] = id;
 
         this.flush();
@@ -178,6 +179,36 @@ export class UserDatabase {
 
     getByName(name: string) {
         return this.db.users[this.db.names[name]] || null;
+    }
+
+    getBySession(sessionName: any) {
+        const db = this.db;
+
+        const session = db.sessions[sessionName];
+        if (!session) {
+            return null;
+        }
+
+        // If it's been untouched for seven days or more
+        if (Date.now() - session.timestamp > 604800000) {
+            delete db.sessions[sessionName]
+            return null;
+        }
+
+        session.timestamp = Date.now();
+        return this.db.users[session.uid];
+    }
+
+    createSession(uid: string) {
+        const db = this.db;
+        
+        let sessionId;
+        do {
+            sessionId = crypto.randomBytes(32).toBase64();
+        } while (db.sessions[sessionId] !== undefined);
+
+        db.sessions[sessionId] = { uid, timestamp: Date.now() };
+        return sessionId;
     }
 }
 

@@ -81,3 +81,64 @@ export function authenticate() {
     }
     return {};
 }
+
+export async function hmacSHA1(secret: BufferSource, message: BufferSource) {
+    const key = await crypto.subtle.importKey(
+        'raw',
+        secret,
+        { name: 'HMAC', hash: { name: 'SHA-1' } },
+        false,
+        ['sign']
+    );
+
+    return new Uint8Array(
+        await crypto.subtle.sign(
+            'HMAC',
+            key,
+            message
+        )
+    );
+}
+
+export function atob32(base32: string) {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    base32 = base32.replace(/=+/g, '').toUpperCase();
+    const result = new Uint8Array((base32.length * 5 / 8) | 0);
+
+    let buffer = 0;
+    let bits = 0;
+    let n = 0;
+
+    for (let i = 0; i < base32.length; i++) {
+        buffer = (buffer << 5) | alphabet.indexOf(base32[i]);
+        bits += 5;
+
+        if (bits >= 8) {
+            result[n++] = (buffer >> (bits - 8)) & 0xff;
+            bits -= 8;
+        }
+    }
+    
+    return result;
+}
+
+export async function totp(secret: string, step = 30, now = null) {
+    let time = BigInt(Math.floor((now || Date.now()) / 1000 / step));
+    const timeBuffer = new Uint8Array(8);
+
+    // Convert the time to a big-endian byte array
+    for (let i = 7; i >= 0; i--) {
+        timeBuffer[i] = Number(time & 0xffn);
+        time >>= 8n;
+    }
+
+    const hmac = await hmacSHA1(atob32(secret), timeBuffer);
+
+    const offset = hmac[hmac.length - 1] & 0xf;
+    const totp = (((hmac[offset] & 0x7f) << 24 |
+                   (hmac[offset + 1] & 0xff) << 16 |
+                   (hmac[offset + 2] & 0xff) << 8 |
+                   (hmac[offset + 3] & 0xff)) >>> 0) % 1000000;
+    
+    return totp.toString().padStart(6, '0');
+}
