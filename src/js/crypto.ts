@@ -68,12 +68,16 @@ export function xorUint8Array(arr0: Uint8Array, arr1: Uint8Array) {
 
 export function authenticate() {
     // Recover key from session
-    if (window.name.length === 44) {
+    if (window.name.length === 112) {
         const wrapper = Uint8Array.fromBase64(window.name);
-        const wrapped = sessionStorage.getItem('wrappedKey');
+        const wrapped = sessionStorage.getItem('wrappedData');
 
-        if (wrapped === null) return null;
-        return deriveAesGcmKey(xorUint8Array(wrapper, Uint8Array.fromBase64(wrapped)));
+        if (wrapped === null) return {};
+        const unwrapped = xorUint8Array(wrapper, Uint8Array.fromBase64(wrapped));
+        const dek = deriveAesGcmKey(unwrapped.subarray(0, 32));
+        const sessionId = unwrapped.subarray(32, 64);
+        const username = new TextDecoder().decode(unwrapped.subarray(64, 84)).replace(/\0/g, '');
+        return { username, sessionId, dek };
     }
-    return null;
+    return {};
 }

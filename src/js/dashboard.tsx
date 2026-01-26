@@ -2,8 +2,8 @@ import { TopNav } from './global.tsx';
 import { h, Fragment } from './dom.ts';
 import { authenticate } from './crypto.ts';
 
-const key = authenticate();
-if (key === null) {
+const {dek, username, sessionId} = authenticate();
+if (dek === undefined || username === undefined || sessionId === undefined) {
     window.location.href = '/login';
 }
 

@@ -122,10 +122,17 @@ async function login(username: string, password: string) {
     const rawDek = await decrypt(Uint8Array.fromBase64(wdek), kek);
 
     // Copy Proton's XOR trick using window.name to allow page refreshes while preventing data from being dumped to the disk via session storage
-    const wrapper = crypto.getRandomValues(new Uint8Array(32));
+    const userdata = new Uint8Array(84);
+    userdata.set(rawDek, 0);
+    userdata.set(Uint8Array.fromBase64(sessionId), 32);
+    userdata.set(new TextEncoder().encode(username), 64);
+
+    console.log(userdata, rawDek);
+
+    const wrapper = crypto.getRandomValues(new Uint8Array(84));
     window.name = wrapper.toBase64();
-    const wrapped = xorUint8Array(rawDek as Uint8Array, wrapper);
-    sessionStorage.setItem('wrappedKey', wrapped.toBase64());
+    const wrapped = xorUint8Array(userdata, wrapper);
+    sessionStorage.setItem('wrappedData', wrapped.toBase64());
 
     return { sessionId };
 }

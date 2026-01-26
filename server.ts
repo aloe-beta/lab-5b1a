@@ -73,6 +73,8 @@ class Server {
 
     get = this.createHandler('GET');
     post = this.createHandler('POST');
+    put = this.createHandler('PUT');
+    delete = this.createHandler('DELETE');
 
     listen(...args: any[]) {
         this.httpServer.listen(...args);

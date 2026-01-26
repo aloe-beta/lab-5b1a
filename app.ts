@@ -1,7 +1,7 @@
 import Server from './server.ts';
 import crypto from 'node:crypto';
 import { ml_kem768 } from '@noble/post-quantum/ml-kem.js';
-import { TimedStore } from './database.ts';
+import { TimedStore, BlobStore, UserDatabase } from './database.ts';
 
 const PORT = 5080;
 
@@ -9,10 +9,10 @@ async function sha256(data: any) {
     return crypto.createHash('sha256').update(data).digest();
 }
 
-// TODO: Replace with an actual database implementation
-const db: Map<string, Record<'pk' | 'wdek' | 'rdek' | 'salt', string>> = new Map();
-
+const db = new UserDatabase('.data/users.json');
+const store = new BlobStore('.data/blobs');
 const cache = new TimedStore(60);
+
 const server = new Server;
 
 function usernameInvalid(username: any) {
@@ -32,7 +32,7 @@ server.post('/api/username', async req => {
     if (typeof username !== 'string') {
         return [{ error: 'Malformed Request' }, 400];
     }
-    if (db.has(username)) {
+    if (db.hasName(username)) {
         return [{ error: 'Username taken' }, 409];
     }
 
@@ -51,11 +51,18 @@ server.post('/api/register', async req => {
     if (malformed) {
         return [{ error: 'Malformed request' }, 400];
     }
-    if (db.has(username)) {
+    if (db.hasName(username)) {
         return [{ error: 'Username taken' }, 409];
     }
 
-    db.set(username, { pk, salt, wdek, rdek });
+    const uid = crypto.randomBytes(32).toBase64();
+    store.createBin(uid);
+
+    let success = db.create(uid, username, { pk, salt, wdek, rdek });
+    if (!success) {
+        return [{ error: '' }, 500];
+    }
+
     return [{}];
 });
 
@@ -64,7 +71,7 @@ server.post('/api/salt', async req => {
     if (usernameInvalid(username)) {
         return [{ error: 'Malformed request' }, 400];
     }
-    const user = db.get(username);
+    const user = db.getByName(username);
     if (user === undefined) {
         return [{ error: 'User not found' }, 404];
     }
@@ -87,7 +94,7 @@ server.post('/api/auth', async req => {
     if (malformed) {
         return [{ error: 'Malformed request' }, 400];
     }
-    const user = db.get(username);
+    const user = db.getByName(username);
     if (user === undefined) {
         return [{ error: 'Invalid credentials' }, 401];
     }
@@ -108,9 +115,23 @@ server.post('/api/auth', async req => {
     if (token !== client_token) {
         return [{ error: 'Invalid credentials' }, 401];
     }
+
+    const sessionId = crypto.randomBytes(32).toBase64();
     
-    return [{ wdek: user.wdek }];
+    return [{ wdek: user.wdek, sessionId }];
 });
+
+// server.post('/api/db', async req => {
+//     const { sessionId, key } = await req.jsonBody(); 
+//     if (invalid(sessionId, 44) || key.length > 128 || key.length === 0) {
+//         return [{ error: 'Malformed request' }, 400];
+//     }
+
+//     //
+// });
+// server.get('/api/db', async req => {
+//     //
+// });
 
 server.listen(PORT, () => {
     console.log(`http://127.0.0.1:${PORT}`);
