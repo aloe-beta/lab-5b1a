@@ -1,4 +1,4 @@
-import { post, PasswordInput, UsernameInput } from './global.tsx';
+import { post, PasswordInput, UsernameInput, TopNav } from './global.tsx';
 import { h, Fragment } from './dom.ts';
 
 const body = document.body;
@@ -139,7 +139,15 @@ function RegistrationForm() {
     </>);
 }
 
-body.append(<RegistrationForm></RegistrationForm>);
+function App() {
+    return (<>
+        <TopNav />
+        <div class='sp xl'></div>
+        <RegistrationForm></RegistrationForm>
+    </>);
+}
+
+body.append(App());
 
 import loadArgon2idWasm from './argon2id.min.mjs';
 import { ml_kem768 } from '@noble/post-quantum/ml-kem.js';

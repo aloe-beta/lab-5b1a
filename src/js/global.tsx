@@ -92,6 +92,15 @@ export function PasswordInput(options?: templateOptions) {
     return element;
 }
 
+export function Checkbox(options: templateOptions, label: string) {
+    const checkbox = <input type='checkbox' id={options.id} />;
+    return (
+        <label class='checkbox' for={options.id}>
+            {checkbox} {label}
+        </label>
+    );
+}
+
 export function TopNav() {
     return (
         <div class='topnav'></div>

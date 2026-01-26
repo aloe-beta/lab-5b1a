@@ -1,4 +1,4 @@
-import { post, PasswordInput, UsernameInput, TopNav } from './global.tsx';
+import { post, PasswordInput, UsernameInput, Checkbox, TopNav } from './global.tsx';
 import { h, Fragment } from './dom.ts';
 
 function LoginForm() {
@@ -9,6 +9,8 @@ function LoginForm() {
 
     name.addEventListener('input', check);
     pass.addEventListener('input', check);
+    name.addEventListener('keydown', changeFocus);
+    pass.addEventListener('keydown', changeFocus);
 
     let nameValid = false, passValid = false;
 
@@ -18,6 +20,17 @@ function LoginForm() {
         nameValid = name.checkValidity() && name.value !== '';
         passValid = pass.checkValidity() && pass.value !== '';
         button.classList.toggle('disabled', !(nameValid && passValid));
+    }
+
+    function changeFocus(event: KeyboardEvent) {
+        if (event.key !== 'Enter') return;
+        if (event.target === name && nameValid) {
+            pass.focus();
+            return;
+        }
+        if (event.target === pass && !button.classList.contains('disabled')) {
+            button.click();
+        }
     }
 
     button.addEventListener('click', async event => {
@@ -43,6 +56,7 @@ function LoginForm() {
             <p>Enter your account details.</p>
             {nameElmt}
             {passElmt}
+            <Checkbox id='a'>Remember me</Checkbox>
             {button}
             <div class='form-width center'>Need an account? <a href="/register">Sign up</a>.</div>
         </div>

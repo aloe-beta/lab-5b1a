@@ -163,6 +163,51 @@ body.dark {
     }
 }
 
+.checkbox {
+    display: block;
+    padding: 12px;
+    margin: -4px;
+
+    gap: 8px;
+
+    &::before {
+        display: inline-block;
+        content: '';
+        width: 20px;
+        height: 20px;
+        background-color: var(--bg);
+        cursor: pointer;
+
+        vertical-align: text-bottom;
+        margin-right: 8px;
+
+        box-sizing: border-box;
+        border: 1px solid var(--stroke);
+        border-radius: 4px;
+
+        transition: all .05s ease;
+    }
+
+    &:has(input:checked)::before {
+        box-shadow: 0 0 0 2px var(--bg) inset, 0 0 0 12px var(--primary) inset;
+        border-color: var(--primary);
+    }
+
+    &::before:hover {
+        border-color: var(--primary);
+    }
+
+    &:has(input:focus-visible)::before {
+        outline: 2px solid var(--primary);
+    }
+
+    input {
+        position: absolute;
+        pointer-events: none;
+        opacity: 0;
+    }
+}
+
 .center-row {
     display: flex;
     justify-content: center;
