@@ -61,3 +61,19 @@ export async function hkdf(secret: Uint8Array) {
         ["encrypt", "decrypt"]
     );
 }
+
+export function xorUint8Array(arr0: Uint8Array, arr1: Uint8Array) {
+    return arr0.map((x, i) => x ^ arr1[i]);
+}
+
+export function authenticate() {
+    // Recover key from session
+    if (window.name.length === 44) {
+        const wrapper = Uint8Array.fromBase64(window.name);
+        const wrapped = sessionStorage.getItem('wrappedKey');
+
+        if (wrapped === null) return null;
+        return deriveAesGcmKey(xorUint8Array(wrapper, Uint8Array.fromBase64(wrapped)));
+    }
+    return null;
+}

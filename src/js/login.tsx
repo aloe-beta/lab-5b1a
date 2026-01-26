@@ -1,9 +1,12 @@
 import { post, PasswordInput, UsernameInput, Checkbox, TopNav } from './global.tsx';
 import { h, Fragment } from './dom.ts';
 
+import { xorUint8Array } from './crypto.ts';
+
 function LoginForm() {
     const button = <button class='btn disabled'>Sign in</button>;
     const nameElmt = <UsernameInput id='username' />, passElmt = <PasswordInput id='password' />;
+    const trustElmt = <Checkbox id='trust'>Remember me</Checkbox>;
     const name = nameElmt.children[0] as HTMLInputElement;
     const pass = passElmt.children[0] as HTMLInputElement;
 
@@ -39,14 +42,19 @@ function LoginForm() {
             return;
         }
 
-        const { dek, error } = await login(name.value, pass.value);
+        const { error } = await login(name.value, pass.value);
         if (error) {
             button.classList.add('disabled');
             return;
         }
 
         // At this point, the user should be authenticated.
-        // TODO: Implement persistent authentication
+        const trusted = (trustElmt.children[0] as HTMLInputElement).checked;
+
+        if (trusted) {
+            // TODO: Implement persistent multi-session auth without storing the key on disk
+        }
+
         window.location.href = "/dashboard.html";
     });
 
@@ -56,7 +64,7 @@ function LoginForm() {
             <p>Enter your account details.</p>
             {nameElmt}
             {passElmt}
-            <Checkbox id='a'>Remember me</Checkbox>
+            {trustElmt}
             {button}
             <div class='form-width center'>Need an account? <a href="/register">Sign up</a>.</div>
         </div>
@@ -111,9 +119,13 @@ async function login(username: string, password: string) {
     }
 
     const kek = await hkdf(seed);
-    const dek = await deriveAesGcmKey(
-        await decrypt(Uint8Array.fromBase64(wdek), kek)
-    );
+    const rawDek = await decrypt(Uint8Array.fromBase64(wdek), kek);
 
-    return { dek, sessionId };
+    // Copy Proton's XOR trick using window.name to allow page refreshes while preventing data from being dumped to the disk via session storage
+    const wrapper = crypto.getRandomValues(new Uint8Array(32));
+    window.name = wrapper.toBase64();
+    const wrapped = xorUint8Array(rawDek as Uint8Array, wrapper);
+    sessionStorage.setItem('wrappedKey', wrapped.toBase64());
+
+    return { sessionId };
 }
