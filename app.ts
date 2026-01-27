@@ -58,7 +58,7 @@ server.post('/api/register', async req => {
     const uid = crypto.randomBytes(32).toBase64();
     store.createBin(uid);
 
-    let success = db.create(uid, username, { pk, salt, wdek, rdek });
+    let success = db.create(uid, username, { pk, salt, wdek, rdek, uid });
     if (!success) {
         return [{ error: '' }, 500];
     }
@@ -121,8 +121,9 @@ server.post('/api/auth', async req => {
     return [{ wdek: user.wdek, sessionId }];
 });
 
+// TODO: Better separate APIs
 server.post('/api/db', async req => {
-    const { sessionId, key } = await req.jsonBody(); 
+    const { sessionId, key, value } = await req.jsonBody();
     if (invalid(sessionId, 44) || key.length > 128 || key.length === 0) {
         return [{ error: 'Malformed request' }, 400];
     }
@@ -132,11 +133,17 @@ server.post('/api/db', async req => {
         return [{ error: 'Invalid credentials' }, 401];
     }
 
-    //
+    if (!value) {
+        let contents: any = store.get(session.uid, key);
+        if (contents !== null) contents = contents.toBase64();
+        return [{ contents }];
+    } else {
+        // TODO: Sanitize input (base64)
+        return [{ success: store.set(session.uid, key, Buffer.from(value, 'base64')) }];
+    }
+
+    return [{}];
 });
-// server.get('/api/db', async req => {
-//     //
-// });
 
 server.listen(PORT, () => {
     console.log(`http://127.0.0.1:${PORT}`);

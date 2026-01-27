@@ -617,38 +617,9 @@ h1, h2, h3, h4, h5, h6, p {
     }
 }
 
-/* .checkbox {
-    display: inline-block;
-    position: relative;
-    width: 24px;
-    height: 24px;
-    margin: 8px;
-    background-color: var(--neutral);
-    vertical-align: middle;
-    border-radius: 8px;
-
-    box-shadow: 0 0 0 2px var(--bg);
-
-    &:has(input:checked) {
-        background-color: var(--primary);
-    }
-
-    &::after {
-        content: "";
-        position: absolute;
-        width: 44px;
-        height: 44px;
-
-        top: -12px;
-        left: -12px;
-    }
-
-    input {
-        position: absolute;
-        pointer-events: none;
-        opacity: 0;
-    }
-} */
+.margin-center {
+    margin: 8px auto;
+}
 
 @font-face {
     font-family: Lato;

@@ -1,0 +1,145 @@
+.totp {
+    position: relative;
+    overflow: hidden;
+    padding: 12px;
+
+    width: 300px;
+    border: 1px solid var(--stroke-light);
+    box-sizing: border-box;
+    border-radius: 16px;
+
+    --interval: attr(interval s, 30s);
+
+    .donut {
+        vertical-align: middle;
+        width: 36px;
+        font-size: 14px;
+        float: right;
+        margin: 0;
+    }
+
+    &:hover {
+        cursor: pointer;
+    }
+
+    .header {
+        font-weight: bold;
+        user-select: none;
+    }
+
+    span {
+        vertical-align: middle;
+        float: left;
+        line-height: 36px;
+    }
+
+    .edit {
+        width: 36px;
+        text-align: center;
+        padding: 12px;
+        margin: -12px;
+        float: right;
+        font-weight: normal;
+        text-decoration: none;
+        z-index: 1;
+        position: relative;
+
+        user-select: none;
+
+        &:hover {
+            text-decoration: underline;
+        }
+
+        &:active {
+            color: var(--primary-active);
+        }
+    }
+
+    .code {
+        transition: color .05s linear;
+    }
+
+    &:has(.edit:hover) .code {
+        color: var(--text);
+    }
+
+    &:hover .code {
+        color: var(--primary);
+    }
+
+    &:active .code {
+        color: var(--primary-active);
+    }
+
+    .donut.animated {
+        animation: progress var(--interval) linear forwards;
+    }
+}
+
+@property --percent {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 25;
+}
+
+.donut {
+    position: relative;
+    width: 100px;
+    aspect-ratio: 1;
+    margin: 8px;
+
+    /* --percent: attr(value number, 50); */
+
+    border-radius: 50%;
+    background-image: conic-gradient(var(--primary) calc(var(--percent) * 1%), var(--fill) calc(var(--percent) * 1% + 0.4%));
+
+    &::before {
+        content: attr(label);
+        text-align: center;
+        align-content: center;
+
+        position: absolute;
+        left: 12%;
+        top: 12%;
+        width: calc(76%);
+        height: calc(76%);
+        background-color: var(--bg);
+        border-radius: 50%;
+    }
+}
+
+.se-anchor {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+}
+
+.center-anchor {
+    position: fixed;
+    width: min-content;
+    left: 50vw;
+    top: 50vh;
+    transform: translate(-50%, -50%);
+}
+
+.consume-focus {
+    z-index: 10;
+    box-shadow: 0 0 0 100vmax #0002 !important;
+}
+
+@keyframes progress {
+    from {
+        --percent: 100;
+    }
+    to {
+        --percent: 0;
+    }
+}
+
+body > .margin-center {
+    &:empty::after {
+        display: block;
+        content: "Click the button in the bottom-left to create an entry.";
+        min-width: 300px;
+    }
+}

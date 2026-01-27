@@ -1,13 +1,11 @@
 import { h } from './dom.ts';
 
-async function post(url: string, body: any) {
+export async function post(url: string, body: any) {
     return (await fetch(url, {
         method: 'POST',
         body: JSON.stringify(body)
     })).json();
 }
-
-export { post };
 
 declare global {
     interface Window {

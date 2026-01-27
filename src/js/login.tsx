@@ -55,7 +55,7 @@ function LoginForm() {
             // TODO: Implement persistent multi-session auth without storing the key on disk
         }
 
-        window.location.href = "/dashboard.html";
+        window.location.href = "/totp.html";
     });
 
     return (

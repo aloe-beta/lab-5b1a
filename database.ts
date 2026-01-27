@@ -26,8 +26,11 @@ export class BlobStore {
     get(bin: string, key: string, offset = 0, length = 0) {
         bin = sanitize(bin), key = sanitize(key);
         const location = path.join(this.dir, bin, key);
-        const stat = fs.statSync(location);
+        if (!fs.existsSync(location)) {
+            return null;
+        }
 
+        const stat = fs.statSync(location);
         if (!stat.isFile()) {
             return null;
         }
@@ -47,10 +50,17 @@ export class BlobStore {
     set(bin: string, key: string, value: Buffer, offset = 0) {
         bin = sanitize(bin), key = sanitize(key);
         const location = path.join(this.dir, bin, key);
-        const stat = fs.statSync(location);
 
-        if (!stat.isFile() || stat.size < offset) {
-            return false;
+        if (fs.existsSync(location)) {
+            const stat = fs.statSync(location);
+
+            if (!stat.isFile() || stat.size < offset) {
+                return false;
+            }
+        } else {
+            if (offset !== 0) {
+                return false;
+            }
         }
 
         const fd = fs.openSync(location, 'w');
@@ -208,6 +218,7 @@ export class UserDatabase {
         } while (db.sessions[sessionId] !== undefined);
 
         db.sessions[sessionId] = { uid, timestamp: Date.now() };
+        this.flush();
         return sessionId;
     }
 }
