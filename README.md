@@ -1,5 +1,5 @@
 # Lab-5b1a
-The name is a placeholder. This is the beginning of multiple frameworks I'm trying to create from scratch (only using a couple crypto libraries and built-in node modules).
+The name is a placeholder. This is the beginning of multiple frameworks I'm trying to create from scratch (only using a couple crypto libraries and built-in node modules). The demo is currently a TOTP auth app built with the frameworks.
 
 Note: The frontend uses TSX through Vite without using React.
 
@@ -32,7 +32,7 @@ For end-to-end encrypted applications, it should be impossible for the server to
 To tackle that problem, I created a post-quantum Password Authenticated Key Exchange (PAKE) implementation that allows the client to prove its identity to the server without revealing anything about its encryption key, while being able to regenerate the key from its password.
 
 
-**This is PAKE intended to be run on top of HTTPS.**
+**This PAKE is intended to be run on top of HTTPS.**
 ### Registration pseudo-code
 ```
 const ARGON2ID_SETTINGS = {
