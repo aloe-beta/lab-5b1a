@@ -3,11 +3,75 @@ import { h, Fragment } from './dom.ts';
 import { authenticate, decrypt, encrypt, totp } from './crypto.ts';
 import { Input, post } from './global.tsx';
 
-// TODO: Implement synchronization with two intervals total instead of two intervals per card
-
 const {dek, username, sessionId} = authenticate() as { dek: Promise<CryptoKey>, username: string, sessionId: Uint8Array };
 if (dek === undefined || username === undefined || sessionId === undefined) {
     window.location.href = '/login';
+}
+
+// WIP (currently deadcode): Building a better data structure for this mess.
+type totpEntry = { name: string, interval: number, secret: string };
+
+class Totp {
+    entries;
+    counterInterval;
+    updateInterval;
+    container;
+    cards;
+
+    counter;
+
+    constructor(entries: totpEntry[]) {
+        this.entries = entries;
+        this.container = <></>;
+
+        this.cards = entries.map((entry, i) => {
+            const card = <TotpCard {...entry} index={i} />;
+            this.container.append(card);
+
+            const [header, code, donut] = card.children;
+            const [name, edit] = header.children;
+
+            return {
+                card,
+                header,
+                code,
+                donut,
+                nameElmt: name,
+                edit,
+                ...entry
+            };
+        });
+
+        const now = Date.now();
+        this.counter = now % 60000 > 30000 ? 1 : 0;
+
+        // Timeouts and intervals share the same ID pool; cleanup can use clearInterval to handle this at any stage.
+        this.updateCounters();
+        this.counterInterval = setTimeout(() => {
+            this.updateCounters();
+            this.counterInterval = setInterval(this.updateCounters, 1000);
+        }, 1000 - now % 1000);
+
+        this.updateCodes();
+        this.updateInterval = setTimeout(() => {
+            this.updateCodes();
+            this.updateInterval = setInterval(this.updateCodes, 30000);
+        }, 30000 - now % 30000);
+    }
+
+    updateCodes() {
+        this.counter++;
+        for (const {code: codeElmt, interval, secret, donut} of this.cards) {
+            totp(secret).then(code => {
+                codeElmt.textContent = code.substring(0, 3) + '-' + code.substring(3);
+            });
+        }
+    }
+    updateCounters() {
+        for (const {donut, interval} of this.cards) {
+            donut.setAttribute('label', (interval / 1000 - (Date.now() % interval / 1000) >>> 0).toString());
+        }
+    }
 }
 
 function TotpCard(options: Record<'interval' | 'secret' | 'name' | 'index', any>) {

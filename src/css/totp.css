@@ -139,7 +139,7 @@
 body > .margin-center {
     &:empty::after {
         display: block;
-        content: "Click the button in the bottom-left to create an entry.";
+        content: "Click the button in the bottom-right to create an entry.";
         min-width: 300px;
     }
 }
