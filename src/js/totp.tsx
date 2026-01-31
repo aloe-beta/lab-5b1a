@@ -59,7 +59,6 @@ class Totp {
         // Edit menu/form
         this.menu = Totp.editMenu();
         this.menu.menu.style.display = 'none';
-        this.container.appendChild(this.menu.menu);
     }
 
     updateCodes() {
@@ -269,6 +268,7 @@ async function App() {
         <div class='se-anchor'>
             {newButton}
         </div>
+        {app.menu.menu}
     </>);
 }
 document.body.appendChild(await App());
