@@ -10,37 +10,30 @@ if (dek === undefined || username === undefined || sessionId === undefined) {
 
 // WIP (currently deadcode): Building a better data structure for this mess.
 type totpEntry = { name: string, interval: number, secret: string };
+type totpCard = {
+    name: string,
+    interval: number,
+    secret: string,
+    card: HTMLElement,
+    codeElmt: HTMLElement,
+    donutElmt: HTMLElement,
+    nameElmt: HTMLElement,
+    editElmt: HTMLElement
+};
 
 class Totp {
     entries;
     counterInterval;
     updateInterval;
     container;
-    cards;
+    cards: totpCard[] = [];
 
     counter;
 
     constructor(entries: totpEntry[]) {
         this.entries = entries;
-        this.container = <></>;
-
-        this.cards = entries.map((entry, i) => {
-            const card = <TotpCard {...entry} index={i} />;
-            this.container.append(card);
-
-            const [header, code, donut] = card.children;
-            const [name, edit] = header.children;
-
-            return {
-                card,
-                header,
-                code,
-                donut,
-                nameElmt: name,
-                edit,
-                ...entry
-            };
-        });
+        this.container = <div class='margin-center' id='container' style='width: min-content'></div>;
+        entries.forEach(entry => this.addCard(entry, false));
 
         const now = Date.now();
         this.counter = now % 60000 > 30000 ? 1 : 0;
@@ -49,28 +42,87 @@ class Totp {
         this.updateCounters();
         this.counterInterval = setTimeout(() => {
             this.updateCounters();
-            this.counterInterval = setInterval(this.updateCounters, 1000);
+            // Arrow function needed here to preserve access to 'this'
+            this.counterInterval = setInterval(() => this.updateCounters(), 1000);
         }, 1000 - now % 1000);
 
         this.updateCodes();
         this.updateInterval = setTimeout(() => {
             this.updateCodes();
-            this.updateInterval = setInterval(this.updateCodes, 30000);
+            this.updateInterval = setInterval(() => this.updateCodes(), 30000);
         }, 30000 - now % 30000);
     }
 
     updateCodes() {
         this.counter++;
-        for (const {code: codeElmt, interval, secret, donut} of this.cards) {
-            totp(secret).then(code => {
-                codeElmt.textContent = code.substring(0, 3) + '-' + code.substring(3);
-            });
+        const now = Date.now();
+        for (const card of this.cards) {
+            if (card.interval === 60 && this.counter % 2 === 0) continue;
+
+            this.updateCode(card, now);
         }
     }
+    updateCode(card: totpCard, now: null | number = null) {
+        const { secret, codeElmt, interval, donutElmt } = card;
+        now ||= Date.now();
+
+        totp(secret).then(code => {
+            codeElmt.textContent = code.substring(0, 3) + '-' + code.substring(3);
+        });
+
+        donutElmt.classList.remove('animated');
+        void donutElmt.offsetWidth; // This resets the animation.
+        donutElmt.style.animationDelay = `-${now % (interval * 1000)}ms`;
+        donutElmt.classList.add('animated');
+    }
+
     updateCounters() {
-        for (const {donut, interval} of this.cards) {
-            donut.setAttribute('label', (interval / 1000 - (Date.now() % interval / 1000) >>> 0).toString());
+        const now = Date.now();
+
+        for (const card of this.cards) {
+            this.updateCounter(card, now);
         }
+    }
+    updateCounter(card: totpCard, now: number | null = null) {
+        now ||= Date.now();
+
+        const { donutElmt, interval } = card;
+        donutElmt.setAttribute('label', (interval - (now / 1000 % interval) >>> 0).toString());
+    }
+
+    addCard(entry: totpEntry, update = true) {
+        const codeElmt = <span class='code'>___-___</span>;
+        const donutElmt = <div class='donut' label='0'></div>;
+        const editElmt = <a class='edit'>Edit</a>;
+        const nameElmt = <span>{entry.name}</span>;
+
+        const cardElmt = <div class='totp card' interval={entry.interval}>
+            <div class='header'>{nameElmt}{editElmt}</div>
+            {codeElmt}
+            {donutElmt}
+        </div>;
+
+        const card = {
+            card: cardElmt,
+            codeElmt,
+            donutElmt,
+            nameElmt,
+            editElmt,
+            ...entry
+        };
+
+        this.container.appendChild(cardElmt);
+        this.cards.push(card);
+
+        if (update) {
+            this.updateCode(card);
+            this.updateCounter(card);
+        }
+
+        return card;
+    }
+    editCard(card: totpCard) {
+        //
     }
 }
 
