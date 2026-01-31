@@ -621,6 +621,57 @@ h1, h2, h3, h4, h5, h6, p {
     margin: 8px auto;
 }
 
+/* WIP */
+.segmented-select {
+    display: inline-flex;
+    margin: 8px;
+    gap: 4px;
+
+    width: 300px;
+
+    label {
+        display: block;
+        height: 44px;
+        width: 100%;
+        background-color: var(--fill);
+
+        border-radius: 4px;
+        color: var(--fill-text);
+        cursor: pointer;
+        user-select: none;
+
+        align-content: center;
+        text-align: center;
+
+        border: 1px solid var(--stroke);
+        box-sizing: border-box;
+
+        &:has(input:active), &:has(input:focus-visible) {
+            background-color: var(--fill-active);
+        }
+
+        &:has(input:checked) {
+            border: 2px solid var(--primary);
+        }
+
+        &:first-child {
+            border-top-left-radius: 12px;
+            border-bottom-left-radius: 12px;
+        }
+
+        &:last-child {
+            border-top-right-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+
+        input {
+            position: absolute;
+            pointer-events: none;
+            opacity: 0;
+        }
+    }
+}
+
 @font-face {
     font-family: Lato;
     src: url('../fonts/Lato/Lato-Regular.ttf');

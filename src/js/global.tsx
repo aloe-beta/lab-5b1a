@@ -99,6 +99,17 @@ export function Checkbox(options: templateOptions, label: string) {
     );
 }
 
+export function SegmentedSelect(options: { name: string, options: Record<string, [string, string]> }) {
+    return (
+        <div class='segmented-select'>
+            {Object.keys(options.options).map(key => {
+                const [ label, id ] = options.options[key];
+                return <label for={id}><input type='radio' id={id} name={options.name} value={key} /> {label}</label>;
+            })}
+        </div>
+    );
+}
+
 export function TopNav() {
     return (
         <div class='topnav'></div>

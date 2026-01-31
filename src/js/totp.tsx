@@ -1,7 +1,7 @@
 // This file is a horrible mess.
 import { h, Fragment } from './dom.ts';
 import { authenticate, decrypt, encrypt, totp } from './crypto.ts';
-import { Input, post } from './global.tsx';
+import { Input, post, SegmentedSelect } from './global.tsx';
 
 const {dek, username, sessionId} = authenticate() as { dek: Promise<CryptoKey>, username: string, sessionId: Uint8Array };
 if (dek === undefined || username === undefined || sessionId === undefined) {
@@ -28,6 +28,7 @@ class Totp {
     container;
     cards: totpCard[] = [];
 
+    menu;
     counter;
 
     constructor(entries: totpEntry[]) {
@@ -51,6 +52,14 @@ class Totp {
             this.updateCodes();
             this.updateInterval = setInterval(() => this.updateCodes(), 30000);
         }, 30000 - now % 30000);
+
+        // Sync animation on page refocus
+        addEventListener('focus', () => this.updateCodes());
+
+        // Edit menu/form
+        this.menu = Totp.editMenu();
+        this.menu.menu.style.display = 'none';
+        this.container.appendChild(this.menu.menu);
     }
 
     updateCodes() {
@@ -91,10 +100,11 @@ class Totp {
     }
 
     addCard(entry: totpEntry, update = true) {
+        // Create card
         const codeElmt = <span class='code'>___-___</span>;
         const donutElmt = <div class='donut' label='0'></div>;
         const editElmt = <a class='edit'>Edit</a>;
-        const nameElmt = <span>{entry.name}</span>;
+        const nameElmt = <>{entry.name}</>;
 
         const cardElmt = <div class='totp card' interval={entry.interval}>
             <div class='header'>{nameElmt}{editElmt}</div>
@@ -111,6 +121,16 @@ class Totp {
             ...entry
         };
 
+        // Define behavior
+        editElmt.addEventListener('click', event => {
+            event.stopImmediatePropagation();
+            this.editCard(card);
+        });
+        cardElmt.addEventListener('click', event => {
+            navigator.clipboard.writeText(codeElmt.textContent.replace('-', ''));
+        });
+
+        // Append and update
         this.container.appendChild(cardElmt);
         this.cards.push(card);
 
@@ -118,110 +138,144 @@ class Totp {
             this.updateCode(card);
             this.updateCounter(card);
         }
-
         return card;
     }
-    editCard(card: totpCard) {
-        //
-    }
-}
-
-function TotpCard(options: Record<'interval' | 'secret' | 'name' | 'index', any>) {
-    const codeElmt = <span class='code'>___-___</span>;
-    const donut = <div class='donut' label='0'></div>;
-
-    async function updateCode() {
-        const code = await totp(options.secret);
-        codeElmt.textContent = code.substring(0, 3) + '-' + code.substring(3);
-        donut.classList.remove('animated');
-        void donut.offsetWidth; // This resets the animation.
-        donut.classList.add('animated');
-    }
-
-    const interval = options.interval * 1000;
-    const elapsed = Date.now() % interval;
-
-    donut.style.animationDelay = `-${elapsed}ms`;
-    donut.classList.add('animated');
-
-    updateCode();
-    setTimeout(() => {
-        donut.style.animationDelay = `0s`;
-        updateCode();
-        setInterval(updateCode, interval);
-    }, interval - elapsed);
-    
-
-    syncedInterval(() => {
-        donut.setAttribute('label', (interval / 1000 - (Date.now() % interval / 1000) >>> 0).toString());
-    }, 1000);
-
-    const editElmt = <a class='edit'>Edit</a>;
-    editElmt.addEventListener('click', event => {
-        editEntry(options.index);
-    });
-
-    return (
-        <div class='totp card' interval={options.interval}>
-            <div class='header'>{options.name}{editElmt}</div>
-            {codeElmt}
-            {donut}
-        </div>
-    );
-}
-
-function TotpMenu() {
-    const nameElmt = <Input id='name' placeholder='Service name' autocomplete='off' />;
-    const secretElmt = <Input id='secret' placeholder='Secret' autocomplete='off' />
-    const intervalElmt = <Input id='interval' placeholder='Interval' value='30' type='number' autocomplete='off' />;
-    const saveBtn = <button class='btn disabled'>Save</button>;
-    const deleteBtn = <button class='btn tertiary'>Delete</button>;
-
-    const name = nameElmt.children[0] as HTMLInputElement;
-    const secret = secretElmt.children[0] as HTMLInputElement;
-    const interval = intervalElmt.children[0] as HTMLInputElement;
-
-    for (const elmt of [name, secret, interval]) {
-        elmt.addEventListener('input', validate);
-    }
-
-    function validate() {
-        saveBtn.classList.toggle('disabled', !(name.value && secret.value && interval.value));
-    }
-
-    saveBtn.addEventListener('click', event => {
-        if (saveBtn.classList.contains('disabled')) {
-            for (const elmt of [name, secret, interval]) {
-                if (!elmt.value) {
-                    elmt.focus()
-                    return;
-                }
-            }
-            // Don't return if it's somehow broken (it is)
-            // return;
+    editCard(card: totpCard | null) {
+        const menu = this.menu;
+        if (card) {
+            menu.name.value = card.name;
+            menu.secret.value = card.secret;
+            menu.interval[card.interval === 30 ? 0 : 1].checked = true;
+            menu.save.classList.toggle('disabled', false);
         }
 
-        saveEntry()
-    });
+        menu.menu.style.display = 'block';
+    }
 
-    deleteBtn.addEventListener('click', event => {
-        entries.splice(entry, 1);
-        setData(JSON.stringify(entries));
-        window.location.reload();
-    });
+    static editMenu() {
+        const nameElmt = <Input id='name' placeholder='Service name' autocomplete='off' />;
+        const secretElmt = <Input id='secret' placeholder='Secret' autocomplete='off' />
+        const intervalElmt = <SegmentedSelect name='interval' options={{'30': ['30', 'i30'], '60': ['60', 'i60']}} />;
+        const saveBtn = <button class='btn disabled'>Save</button>;
+        const deleteBtn = <button class='btn tertiary'>Delete</button>;
 
-    return (
-        <div class='card l overlay center-anchor consume-focus'>
-            <h2>Authenticator</h2>
-            <p>Enter the details for the application.</p>
-            {nameElmt}
-            {secretElmt}
-            {intervalElmt}
-            {saveBtn}
-            {deleteBtn}
-        </div>
-    );
+        return {
+            name: nameElmt.children[0] as HTMLInputElement,
+            secret: secretElmt.children[0] as HTMLInputElement,
+            interval: Array.from(intervalElmt.children).map(c => c.children[0] as HTMLInputElement),
+            save: saveBtn,
+            delete: deleteBtn,
+            menu: (
+                <div class='card l overlay center-anchor consume-focus'>
+                    <h2>Authenticator</h2>
+                    <p>Enter the details for the application.</p>
+                    {nameElmt}
+                    {secretElmt}
+                    {intervalElmt}
+                    {saveBtn}
+                    {deleteBtn}
+                </div>
+            )
+        }
+    }
 }
+
+// function TotpCard(options: Record<'interval' | 'secret' | 'name' | 'index', any>) {
+//     const codeElmt = <span class='code'>___-___</span>;
+//     const donut = <div class='donut' label='0'></div>;
+
+//     async function updateCode() {
+//         const code = await totp(options.secret);
+//         codeElmt.textContent = code.substring(0, 3) + '-' + code.substring(3);
+//         donut.classList.remove('animated');
+//         void donut.offsetWidth; // This resets the animation.
+//         donut.classList.add('animated');
+//     }
+
+//     const interval = options.interval * 1000;
+//     const elapsed = Date.now() % interval;
+
+//     donut.style.animationDelay = `-${elapsed}ms`;
+//     donut.classList.add('animated');
+
+//     updateCode();
+//     setTimeout(() => {
+//         donut.style.animationDelay = `0s`;
+//         updateCode();
+//         setInterval(updateCode, interval);
+//     }, interval - elapsed);
+    
+
+//     syncedInterval(() => {
+//         donut.setAttribute('label', (interval / 1000 - (Date.now() % interval / 1000) >>> 0).toString());
+//     }, 1000);
+
+//     const editElmt = <a class='edit'>Edit</a>;
+//     editElmt.addEventListener('click', event => {
+//         editEntry(options.index);
+//     });
+
+//     return (
+//         <div class='totp card' interval={options.interval}>
+//             <div class='header'>{options.name}{editElmt}</div>
+//             {codeElmt}
+//             {donut}
+//         </div>
+//     );
+// }
+
+// function TotpMenu() {
+//     const nameElmt = <Input id='name' placeholder='Service name' autocomplete='off' />;
+//     const secretElmt = <Input id='secret' placeholder='Secret' autocomplete='off' />
+//     const intervalElmt = <Input id='interval' placeholder='Interval' value='30' type='number' autocomplete='off' />;
+//     const saveBtn = <button class='btn disabled'>Save</button>;
+//     const deleteBtn = <button class='btn tertiary'>Delete</button>;
+
+//     const name = nameElmt.children[0] as HTMLInputElement;
+//     const secret = secretElmt.children[0] as HTMLInputElement;
+//     const interval = intervalElmt.children[0] as HTMLInputElement;
+
+//     for (const elmt of [name, secret, interval]) {
+//         elmt.addEventListener('input', validate);
+//     }
+
+//     function validate() {
+//         saveBtn.classList.toggle('disabled', !(name.value && secret.value && interval.value));
+//     }
+
+//     saveBtn.addEventListener('click', event => {
+//         if (saveBtn.classList.contains('disabled')) {
+//             for (const elmt of [name, secret, interval]) {
+//                 if (!elmt.value) {
+//                     elmt.focus()
+//                     return;
+//                 }
+//             }
+//             // Don't return if it's somehow broken (it is)
+//             // return;
+//         }
+
+//         saveEntry()
+//     });
+
+//     deleteBtn.addEventListener('click', event => {
+//         entries.splice(entry, 1);
+//         setData(JSON.stringify(entries));
+//         window.location.reload();
+//     });
+
+//     return (
+//         <div class='card l overlay center-anchor consume-focus'>
+//             <h2>Authenticator</h2>
+//             <p>Enter the details for the application.</p>
+//             {nameElmt}
+//             {secretElmt}
+//             {intervalElmt}
+//             {saveBtn}
+//             {deleteBtn}
+//         </div>
+//     );
+// }
 
 async function getData() {
     const contents = (await post('/api/db', { sessionId: sessionId.toBase64(), key: 'totp' })).contents;
@@ -239,65 +293,68 @@ async function setData(data: string) {
 let data = await getData();
 let entries = data ? JSON.parse(data) : [];
 
-let entry = 0;
-const menu = <TotpMenu />;
-menu.style.display = 'none';
+const app = new Totp(entries);
+document.body.appendChild(app.container);
 
-function editEntry(index: number) {
-    menu.style.display = 'block';
-    entry = index;
+// let entry = 0;
+// const menu = <TotpMenu />;
+// menu.style.display = 'none';
 
-    const service = entries[index];
-    (document.getElementById('name') as HTMLInputElement).value = service?.name || '';
-    (document.getElementById('secret') as HTMLInputElement).value = service?.secret || '';
-    (document.getElementById('interval') as HTMLInputElement).value = service?.interval.toString() || '30';
-}
+// function editEntry(index: number) {
+//     menu.style.display = 'block';
+//     entry = index;
 
-function saveEntry() {
-    menu.style.display = 'none';
-    const name = (document.getElementById('name') as HTMLInputElement);
-    const secret = (document.getElementById('secret') as HTMLInputElement);
-    const interval = (document.getElementById('interval') as HTMLInputElement);
+//     const service = entries[index];
+//     (document.getElementById('name') as HTMLInputElement).value = service?.name || '';
+//     (document.getElementById('secret') as HTMLInputElement).value = service?.secret || '';
+//     (document.getElementById('interval') as HTMLInputElement).value = service?.interval.toString() || '30';
+// }
 
-    entries[entry] = { name: name.value, interval: parseFloat(interval.value), secret: secret.value }
-    setData(JSON.stringify(entries));
+// function saveEntry() {
+//     menu.style.display = 'none';
+//     const name = (document.getElementById('name') as HTMLInputElement);
+//     const secret = (document.getElementById('secret') as HTMLInputElement);
+//     const interval = (document.getElementById('interval') as HTMLInputElement);
 
-    // TODO: Add dynamically
-    window.location.reload();
-}
+//     entries[entry] = { name: name.value, interval: parseFloat(interval.value), secret: secret.value }
+//     setData(JSON.stringify(entries));
 
-function syncedInterval(callback: () => void, interval: number, delayExec = false) {
-    if (!delayExec) callback();
+//     // TODO: Add dynamically
+//     window.location.reload();
+// }
 
-    const elapsed = Date.now() % interval;
+// function syncedInterval(callback: () => void, interval: number, delayExec = false) {
+//     if (!delayExec) callback();
 
-    setTimeout(() => {
-        callback();
-        setInterval(callback, interval);
-    }, interval - elapsed);
-}
+//     const elapsed = Date.now() % interval;
 
-async function App() {
-    const container = <div class='margin-center' id='container' style='width: min-content'></div>;
-    let i = 0;
-    for (const service of entries) {
-        container.append(<TotpCard name={service.name} interval={service.interval} secret={service.secret} index={i++} />);
-    }
+//     setTimeout(() => {
+//         callback();
+//         setInterval(callback, interval);
+//     }, interval - elapsed);
+// }
 
-    const newButton = <button class='btn square'>+</button>;
-    newButton.addEventListener('click', event => {
-        editEntry(entries.length);
-    });
+// async function App() {
+//     const container = <div class='margin-center' id='container' style='width: min-content'></div>;
+//     let i = 0;
+//     for (const service of entries) {
+//         container.append(<TotpCard name={service.name} interval={service.interval} secret={service.secret} index={i++} />);
+//     }
 
-    return (<>
-        <div class='topnav'></div>
-        {container}
-        <div class='sp' style='margin-top: 88px'></div>
-        <div class='se-anchor'>
-            {newButton}
-        </div>
-        {menu}
-    </>);
-}
+//     const newButton = <button class='btn square'>+</button>;
+//     newButton.addEventListener('click', event => {
+//         editEntry(entries.length);
+//     });
 
-document.body.append(await App());
+//     return (<>
+//         <div class='topnav'></div>
+//         {container}
+//         <div class='sp' style='margin-top: 88px'></div>
+//         <div class='se-anchor'>
+//             {newButton}
+//         </div>
+//         {menu}
+//     </>);
+// }
+
+// document.body.append(await App());
