@@ -2,11 +2,16 @@ import Server from './server.ts';
 import crypto from 'node:crypto';
 import { ml_kem768 } from '@noble/post-quantum/ml-kem.js';
 import { TimedStore, BlobStore, UserDatabase } from './database.ts';
+import fs from 'node:fs';
 
 const PORT = 5080;
 
 async function sha256(data: any) {
     return crypto.createHash('sha256').update(data).digest();
+}
+
+if (!fs.existsSync('.data')) {
+    fs.mkdirSync('.data');
 }
 
 const db = new UserDatabase('.data/users.json');

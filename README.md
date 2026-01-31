@@ -3,12 +3,18 @@ The name is a placeholder. This is the beginning of multiple frameworks I'm tryi
 
 Note: The frontend uses TSX through Vite without using React.
 
-# Running
+# Setup
 Make sure you have Node.JS and NPM installed. Clone the repo and cd into it.
-
 ```
 npm install
 ```
+Generate an SSL certificate and place the private key in `ssl/server.key` and certificate in `ssl/server.crt`:
+```
+mkdir ssl
+openssl req -x509 -newkey rsa:4096 -nodes -keyout ssl/server.key -out ssl/server.crt -days 365 -subj "/CN=localhost"
+```
+
+# Running
 Run the front-end dev server:
 ```
 npm run frontend
